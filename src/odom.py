@@ -3,7 +3,7 @@ import numpy as np
 
 MIN_KP = 1000
 MAX_KP = 3000
-SCALE = 1
+SCALE = 0.2
 
 
 img0 = None
@@ -43,7 +43,7 @@ while True:
     if pos is None:
         pos = t
         rot = R
-    else:
+    elif t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward (?still gives weird results)
         # update position and rotation
         pos += SCALE * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
