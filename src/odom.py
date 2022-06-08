@@ -39,11 +39,11 @@ while True:
     E, inliers = cv2.findEssentialMat(p1, p0, focal=400, pp=(427, 240), method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
     # E solves the inner product aTEb = 0
 
-    retval, R, t, inliers = cv2.recoverPose(E, p1, p0) # calc rotation and translation from E
+    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240)) # calc rotation and translation from E
     if pos is None:
         pos = t
         rot = R
-    elif t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward (?still gives weird results)
+    elif t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects (?still gives weird results)
         # update position and rotation
         pos += SCALE * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
