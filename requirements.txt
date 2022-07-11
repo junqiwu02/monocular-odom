@@ -1,2 +1,5 @@
+gtsam==4.1.1
 numpy==1.22.4
 opencv-python==4.5.5.64
+pkg_resources==0.0.0
+pyparsing==3.0.9
