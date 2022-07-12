@@ -39,7 +39,7 @@ while True:
     E, inliers = cv2.findEssentialMat(p1, p0, focal=400, pp=(427, 240), method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
     # E solves the inner product aTEb = 0
 
-    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240)) # calc rotation and translation from E
+    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240), mask=inliers) # calc rotation and translation from E
     if pos is None:
         pos = t
         rot = R
@@ -52,7 +52,9 @@ while True:
     cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
     cv2.circle(traj, (int(pos[0]) + traj.shape[1] // 2, int(pos[2]) + traj.shape[0] // 2), 1, (255,127,127), 2)
     curr = traj.copy()
-    cv2.circle(curr, (int(pos[0]) + curr.shape[1] // 2, int(pos[2]) + curr.shape[0] // 2), 4, (255,0,0), 2)
+    tail = pos + SCALE * rot @ np.array([0, 0, -100]).reshape((3, 1))
+    cv2.arrowedLine(curr, (int(tail[0]) + curr.shape[1] // 2, int(tail[2]) + curr.shape[0] // 2), 
+        (int(pos[0]) + curr.shape[1] // 2, int(pos[2]) + curr.shape[0] // 2), (255,0,0), 2, tipLength=0.33)
     cv2.imshow("trajectory", curr)
     if cv2.waitKey(1) == ord('q'):
         break
