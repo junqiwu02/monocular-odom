@@ -1,9 +1,8 @@
 import cv2
 import numpy as np
 
-MIN_KP = 1000
-MAX_KP = 3000
-SCALE = 0.2
+MIN_KP = 500
+MAX_KP = 1000
 
 
 img0 = None
@@ -40,21 +39,29 @@ while True:
     # E solves the inner product aTEb = 0
 
     retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240), mask=inliers) # calc rotation and translation from E
+    # NOTE R and t returned will always be unit length since scale cannot be inferred from monocular vision alone
+    # Therefore they must be scaled using another source such as a speedometer, otherwise motion while stationary can seem to vary greatly
+
+    scale = np.average(np.linalg.norm(p0 - p1, axis=1)) # since we have no speedometer, estimate scale as the magnitude of optical flow between frames
+    print(int(scale))
+
     if pos is None:
         pos = t
         rot = R
-    elif t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects (?still gives weird results)
+    elif scale > 2 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
         # update position and rotation
-        pos += SCALE * rot @ t # translation is calc'd first because t is relative to original heading
+        pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
+
+    def graph_coords(v): # convert position vector to graph image coords
+        return (int(v[0] / 10) + traj.shape[1] // 2, int(v[2] / 10) + traj.shape[0] // 2)
 
     # visualize
     cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
-    cv2.circle(traj, (int(pos[0]) + traj.shape[1] // 2, int(pos[2]) + traj.shape[0] // 2), 1, (255,127,127), 2)
+    cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
     curr = traj.copy()
-    tail = pos + SCALE * rot @ np.array([0, 0, -100]).reshape((3, 1))
-    cv2.arrowedLine(curr, (int(tail[0]) + curr.shape[1] // 2, int(tail[2]) + curr.shape[0] // 2), 
-        (int(pos[0]) + curr.shape[1] // 2, int(pos[2]) + curr.shape[0] // 2), (255,0,0), 2, tipLength=0.33)
+    tail = pos + rot @ np.array([0, 0, -200]).reshape((3, 1)) # tail of the arrow will be 1000 units behind the head
+    cv2.arrowedLine(curr, graph_coords(tail), graph_coords(pos), (255,0,0), 2, tipLength=0.333)
     cv2.imshow("trajectory", curr)
     if cv2.waitKey(1) == ord('q'):
         break
