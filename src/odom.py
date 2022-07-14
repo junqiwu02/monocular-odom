@@ -54,13 +54,13 @@ while True:
         rot = R @ rot
 
     def graph_coords(v): # convert position vector to graph image coords
-        return (int(v[0] / 10) + traj.shape[1] // 2, int(v[2] / 10) + traj.shape[0] // 2)
+        return (int(v[0] / 20) + traj.shape[1] // 2, int(v[2] / 20) + traj.shape[0] // 2)
 
     # visualize
     cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
     cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
     curr = traj.copy()
-    tail = pos + rot @ np.array([0, 0, -200]).reshape((3, 1)) # tail of the arrow will be 1000 units behind the head
+    tail = pos + rot @ np.array([0, 0, -300]).reshape((3, 1)) # tail of the arrow will be 300 units behind the head
     cv2.arrowedLine(curr, graph_coords(tail), graph_coords(pos), (255,0,0), 2, tipLength=0.333)
     cv2.imshow("trajectory", curr)
     if cv2.waitKey(1) == ord('q'):
