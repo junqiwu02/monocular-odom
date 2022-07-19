@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import glob
 
 MIN_KP = 500
 MAX_KP = 1000
@@ -7,29 +8,28 @@ MAX_KP = 1000
 
 img0 = None
 p0 = []
-pos = None
-rot = None
+pos = np.zeros((3,1), dtype=np.float64)
+rot = np.eye(3,3)
 
 fast = cv2.FastFeatureDetector_create()
-cap = cv2.VideoCapture('./data/drive.mp4')
 
 traj = np.zeros((480, 640, 3), dtype=np.uint8)
 traj[:] = (255, 255, 255)
 
 
-while True:
+for f in sorted(glob.glob('data/kitti/image_0/*.png')):
     if img0 is None:
-        ret, img0 = cap.read()
+        img0 = cv2.imread(f)
     if len(p0) < MIN_KP:
         p0 = cv2.KeyPoint_convert(fast.detect(img0, mask=None)) # low num of keypoints, run FAST corner detection
     if len(p0) < MIN_KP: # still low number of keypoints, continue to next frame
-        ret, img0 = cap.read()
+        img0 = cv2.imread(f)
         continue
     if len(p0) > MAX_KP:
         np.random.shuffle(p0) # limit max num of keypoints to save processing time
         p0 = p0[:MAX_KP]
 
-    ret, img1 = cap.read()
+    img1 = cv2.imread(f)
     p1, status, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, nextPts=None) # Use KLT optical flow to track keypoints
     mask = status.flatten() == 1 # keep only points which were successfully tracked 
     p0 = p0[mask,:]
@@ -43,12 +43,8 @@ while True:
     # Therefore they must be scaled using another source such as a speedometer, otherwise motion while stationary can seem to vary greatly
 
     scale = np.average(np.linalg.norm(p0 - p1, axis=1)) # since we have no speedometer, estimate scale as the magnitude of optical flow between frames
-    print(int(scale))
 
-    if pos is None:
-        pos = t
-        rot = R
-    elif scale > 2 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
+    if scale > 2 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
         # update position and rotation
         pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
@@ -69,5 +65,4 @@ while True:
     img0 = img1 # go next
     p0 = p1
 
-cap.release()
 cv2.destroyAllWindows()

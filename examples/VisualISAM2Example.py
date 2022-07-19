@@ -84,7 +84,7 @@ def visual_ISAM2_example():
     # will approach the batch result.
     parameters = gtsam.ISAM2Params()
     parameters.setRelinearizeThreshold(0.01)
-    parameters.relinearizeSkip = 1
+    # parameters.relinearizeSkip = 1
     isam = gtsam.ISAM2(parameters)
 
     # Create a Factor Graph and Values to hold the new data
