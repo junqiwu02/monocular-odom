@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import glob
 
-MIN_KP = 500
-MAX_KP = 1000
+MIN_KP = 1000
+MAX_KP = 2000
 
 
 img0 = None
@@ -11,13 +11,21 @@ p0 = []
 pos = np.zeros((3,1), dtype=np.float64)
 rot = np.eye(3,3)
 
+pos_pt = np.zeros((3,1), dtype=np.float64) # prev ground truth pos
+rot_pt = np.eye(3,3)
+
 fast = cv2.FastFeatureDetector_create()
 
 traj = np.zeros((480, 640, 3), dtype=np.uint8)
 traj[:] = (255, 255, 255)
 
+poses = open('data/kitti/00.txt') # ground truth poses
 
-for f in sorted(glob.glob('data/kitti/image_0/*.png')):
+for i, f in enumerate(sorted(glob.glob('data/kitti/image_0/*.png'))):
+    pose_t = np.array(poses.readline().split(' '), dtype=np.float64).reshape((3,4)) # read ground truth pose
+    pos_t = pose_t[:,3].reshape((3,1)) # split pose into pos vector and rot matrix
+    rot_t = pose_t[:,:3]
+
     if img0 is None:
         img0 = cv2.imread(f)
     if len(p0) < MIN_KP:
@@ -42,27 +50,36 @@ for f in sorted(glob.glob('data/kitti/image_0/*.png')):
     # NOTE R and t returned will always be unit length since scale cannot be inferred from monocular vision alone
     # Therefore they must be scaled using another source such as a speedometer, otherwise motion while stationary can seem to vary greatly
 
-    scale = np.average(np.linalg.norm(p0 - p1, axis=1)) # since we have no speedometer, estimate scale as the magnitude of optical flow between frames
+    scale = np.linalg.norm(pos_t - pos_pt)
 
-    if scale > 2 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
+    if True:#t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
         # update position and rotation
         pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
 
     def graph_coords(v): # convert position vector to graph image coords
-        return (int(v[0] / 20) + traj.shape[1] // 2, int(v[2] / 20) + traj.shape[0] // 2)
+        return (int(v[0] / 2) + traj.shape[1] // 2, int(v[2] / 2) + traj.shape[0] // 8)
+
+    def draw_arrow(img, t, R, color):
+        tail = t + R @ np.array([0, 0, -30]).reshape((3, 1)) # tail of the arrow will be 30 units behind the head
+        cv2.arrowedLine(img, graph_coords(tail), graph_coords(t), color, 2, tipLength=0.333)
 
     # visualize
     cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
     cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
-    curr = traj.copy()
-    tail = pos + rot @ np.array([0, 0, -300]).reshape((3, 1)) # tail of the arrow will be 300 units behind the head
-    cv2.arrowedLine(curr, graph_coords(tail), graph_coords(pos), (255,0,0), 2, tipLength=0.333)
-    cv2.imshow("trajectory", curr)
+    cv2.circle(traj, graph_coords(pos_t), 1, (127,255,127), 2)
+    graph = traj.copy()
+    draw_arrow(graph, pos, rot, (255, 0, 0))
+    draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
+    cv2.imshow("trajectory", graph)
     if cv2.waitKey(1) == ord('q'):
         break
     
     img0 = img1 # go next
     p0 = p1
 
+    pos_pt = pos_t
+    rot_pt = rot_t
+
+poses.close()
 cv2.destroyAllWindows()
