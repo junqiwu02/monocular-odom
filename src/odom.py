@@ -2,8 +2,11 @@ import cv2
 import numpy as np
 import glob
 
-MIN_KP = 1000
-MAX_KP = 2000
+MIN_KP = 500
+MAX_KP = 1000
+
+FOCAL = 718.8560
+PP = (607.1928, 185.2157)
 
 
 img0 = None
@@ -43,16 +46,16 @@ for i, f in enumerate(sorted(glob.glob('data/kitti/image_0/*.png'))):
     p0 = p0[mask,:]
     p1 = p1[mask,:]
 
-    E, inliers = cv2.findEssentialMat(p1, p0, focal=400, pp=(427, 240), method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
+    E, inliers = cv2.findEssentialMat(p1, p0, focal=FOCAL, pp=PP, method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
     # E solves the inner product aTEb = 0
 
-    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240), mask=inliers) # calc rotation and translation from E
+    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=FOCAL, pp=PP, mask=inliers) # calc rotation and translation from E
     # NOTE R and t returned will always be unit length since scale cannot be inferred from monocular vision alone
     # Therefore they must be scaled using another source such as a speedometer, otherwise motion while stationary can seem to vary greatly
 
     scale = np.linalg.norm(pos_t - pos_pt)
 
-    if True:#t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
+    if scale > 0.1 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
         # update position and rotation
         pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
