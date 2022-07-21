@@ -1,64 +1,89 @@
 import cv2
 import numpy as np
+import glob
 
-MIN_KP = 1000
-MAX_KP = 3000
-SCALE = 0.2
+MIN_KP = 500
+MAX_KP = 1000
+
+FOCAL = 718.8560
+PP = (607.1928, 185.2157)
 
 
 img0 = None
 p0 = []
-pos = None
-rot = None
+pos = np.zeros((3,1), dtype=np.float64)
+rot = np.eye(3,3)
+
+pos_pt = np.zeros((3,1), dtype=np.float64) # prev ground truth pos
+rot_pt = np.eye(3,3)
 
 fast = cv2.FastFeatureDetector_create()
-cap = cv2.VideoCapture('./data/drive.mp4')
 
 traj = np.zeros((480, 640, 3), dtype=np.uint8)
 traj[:] = (255, 255, 255)
 
+poses = open('data/kitti/00.txt') # ground truth poses
 
-while True:
+for i, f in enumerate(sorted(glob.glob('data/kitti/image_0/*.png'))):
+    pose_t = np.array(poses.readline().split(' '), dtype=np.float64).reshape((3,4)) # read ground truth pose
+    pos_t = pose_t[:,3].reshape((3,1)) # split pose into pos vector and rot matrix
+    rot_t = pose_t[:,:3]
+
     if img0 is None:
-        ret, img0 = cap.read()
+        img0 = cv2.imread(f)
     if len(p0) < MIN_KP:
         p0 = cv2.KeyPoint_convert(fast.detect(img0, mask=None)) # low num of keypoints, run FAST corner detection
     if len(p0) < MIN_KP: # still low number of keypoints, continue to next frame
-        ret, img0 = cap.read()
+        img0 = cv2.imread(f)
         continue
     if len(p0) > MAX_KP:
         np.random.shuffle(p0) # limit max num of keypoints to save processing time
         p0 = p0[:MAX_KP]
 
-    ret, img1 = cap.read()
+    img1 = cv2.imread(f)
     p1, status, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, nextPts=None) # Use KLT optical flow to track keypoints
     mask = status.flatten() == 1 # keep only points which were successfully tracked 
     p0 = p0[mask,:]
     p1 = p1[mask,:]
 
-    E, inliers = cv2.findEssentialMat(p1, p0, focal=400, pp=(427, 240), method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
+    E, inliers = cv2.findEssentialMat(p1, p0, focal=FOCAL, pp=PP, method=cv2.RANSAC) # calc the Essential matrix which transforms between camera poses
     # E solves the inner product aTEb = 0
 
-    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=400, pp=(427, 240)) # calc rotation and translation from E
-    if pos is None:
-        pos = t
-        rot = R
-    elif t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects (?still gives weird results)
+    retval, R, t, inliers = cv2.recoverPose(E, p1, p0, focal=FOCAL, pp=PP, mask=inliers) # calc rotation and translation from E
+    # NOTE R and t returned will always be unit length since scale cannot be inferred from monocular vision alone
+    # Therefore they must be scaled using another source such as a speedometer, otherwise motion while stationary can seem to vary greatly
+
+    scale = np.linalg.norm(pos_t - pos_pt)
+
+    if scale > 0.1 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
         # update position and rotation
-        pos += SCALE * rot @ t # translation is calc'd first because t is relative to original heading
+        pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
         rot = R @ rot
+
+    def graph_coords(v): # convert position vector to graph image coords
+        return (int(v[0] / 2) + traj.shape[1] // 2, int(v[2] / 2) + traj.shape[0] // 8)
+
+    def draw_arrow(img, t, R, color):
+        tail = t + R @ np.array([0, 0, -30]).reshape((3, 1)) # tail of the arrow will be 30 units behind the head
+        cv2.arrowedLine(img, graph_coords(tail), graph_coords(t), color, 2, tipLength=0.333)
 
     # visualize
     cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
-    cv2.circle(traj, (int(pos[0]) + traj.shape[1] // 2, int(pos[2]) + traj.shape[0] // 2), 1, (255,127,127), 2)
-    curr = traj.copy()
-    cv2.circle(curr, (int(pos[0]) + curr.shape[1] // 2, int(pos[2]) + curr.shape[0] // 2), 4, (255,0,0), 2)
-    cv2.imshow("trajectory", curr)
+    cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
+    cv2.circle(traj, graph_coords(pos_t), 1, (127,255,127), 2)
+    graph = traj.copy()
+    draw_arrow(graph, pos, rot, (255, 0, 0))
+    draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
+    cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    cv2.imshow("trajectory", graph)
     if cv2.waitKey(1) == ord('q'):
         break
     
     img0 = img1 # go next
     p0 = p1
 
-cap.release()
+    pos_pt = pos_t
+    rot_pt = rot_t
+
+poses.close()
 cv2.destroyAllWindows()
