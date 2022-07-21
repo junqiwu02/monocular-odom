@@ -74,6 +74,7 @@ for i, f in enumerate(sorted(glob.glob('data/kitti/image_0/*.png'))):
     graph = traj.copy()
     draw_arrow(graph, pos, rot, (255, 0, 0))
     draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
+    cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
     cv2.imshow("trajectory", graph)
     if cv2.waitKey(1) == ord('q'):
         break
