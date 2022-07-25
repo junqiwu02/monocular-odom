@@ -62,7 +62,7 @@ for f in util.progress_bar(sorted(glob.glob('data/kitti/image_0/*.png')), 'Progr
             rot = R @ rot
 
         def graph_coords(v): # convert position vector to graph image coords
-            return (int(v[0] / 2) + traj.shape[1] // 2, int(v[2] / 2) + traj.shape[0] // 8)
+            return (int(v[0] / 2) + traj.shape[1] // 2, -int(v[2] / 2) + traj.shape[0] * 7 // 8)
 
         def draw_arrow(img, t, R, color):
             tail = t + R @ np.array([0, 0, -30]).reshape((3, 1)) # tail of the arrow will be 30 units behind the head
