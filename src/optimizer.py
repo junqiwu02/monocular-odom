@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import gtsam
@@ -5,7 +6,7 @@ import gtsam.utils.plot as gtsam_plot
 
 
 # Create noise models
-ODOMETRY_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([0.0002, 0.0002, 0.001]))
+ODOMETRY_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([0.0004, 0.0004, 0.002]))
 PRIOR_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([0, 0, 0]))
 PLOT_STEP = 50 # poses to skip when plotting
 
@@ -28,11 +29,11 @@ initial = gtsam.Values()
 prev_pos = pos_p[0]
 prev_rot = rot_p[0]
 # add the prior pose
-graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev_pos[0], prev_pos[2], 0.0), PRIOR_NOISE))
-initial.insert(1, gtsam.Pose2(prev_pos[0], prev_pos[2], 0.0))
+graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev_pos[0], prev_pos[2], -math.pi / 2), PRIOR_NOISE))
+initial.insert(0, gtsam.Pose2(prev_pos[0], prev_pos[2], -math.pi / 2))
 
 for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
-    i += 2 # reindex since gtsam indices start at 1
+    i += 1 # reindex
     delta_pos = p - prev_pos
     delta_rot = r @ prev_rot.T
 
@@ -50,7 +51,7 @@ result = optimizer.optimize()
 
 marginals = gtsam.Marginals(graph, result)
 
-for i in range(1, pos_p.shape[0], PLOT_STEP):
+for i in range(0, pos_p.shape[0], PLOT_STEP):
     gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 0.5, marginals.marginalCovariance(i))
 
 plt.show()
