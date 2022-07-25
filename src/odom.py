@@ -61,24 +61,24 @@ for f in util.progress_bar(sorted(glob.glob('data/kitti/image_0/*.png')), 'Progr
             pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
             rot = R @ rot
 
-        def graph_coords(v): # convert position vector to graph image coords
-            return (int(v[0] / 2) + traj.shape[1] // 2, -int(v[2] / 2) + traj.shape[0] * 7 // 8)
+    def graph_coords(v): # convert position vector to graph image coords
+        return (int(v[0] / 2) + traj.shape[1] // 2, -int(v[2] / 2) + traj.shape[0] * 7 // 8)
 
-        def draw_arrow(img, t, R, color):
-            tail = t + R @ np.array([0, 0, -30]).reshape((3, 1)) # tail of the arrow will be 30 units behind the head
-            cv2.arrowedLine(img, graph_coords(tail), graph_coords(t), color, 2, tipLength=0.333)
+    def draw_arrow(img, t, R, color):
+        tail = t + R @ np.array([0, 0, -30]).reshape((3, 1)) # tail of the arrow will be 30 units behind the head
+        cv2.arrowedLine(img, graph_coords(tail), graph_coords(t), color, 2, tipLength=0.333)
 
-        # visualize
-        cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
-        cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
-        cv2.circle(traj, graph_coords(pos_t), 1, (127,255,127), 2)
-        graph = traj.copy()
-        draw_arrow(graph, pos, rot, (255, 0, 0))
-        draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
-        cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
-        cv2.imshow("trajectory", graph)
-        if cv2.waitKey(1) == ord('q'):
-            break
+    # visualize
+    cv2.imshow("img1 (Press 'q' to quit)", cv2.drawKeypoints(img1, cv2.KeyPoint_convert(p1), outImage=None, color=(255,0,0)))
+    cv2.circle(traj, graph_coords(pos), 1, (255,127,127), 2)
+    cv2.circle(traj, graph_coords(pos_t), 1, (127,255,127), 2)
+    graph = traj.copy()
+    draw_arrow(graph, pos, rot, (255, 0, 0))
+    draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
+    cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    cv2.imshow("trajectory", graph)
+    if cv2.waitKey(1) == ord('q'):
+        break
     
     img0 = img1 # go next
     p0 = p1
