@@ -16,6 +16,8 @@ pred = np.loadtxt('data/kitti/00_pred_final.txt').reshape((-1, 3, 4))
 pos_t = gt[:,:,3] # extract position vectors from pose mat
 pos_p = pred[:,:,3]
 
+rot_p = pred[:,:,:3]
+
 plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
 plt.plot(pos_p[:,0], pos_p[:,2], label='Pred')
 plt.legend()
@@ -23,20 +25,23 @@ plt.legend()
 graph = gtsam.NonlinearFactorGraph()
 initial = gtsam.Values()
 
-prev = pos_p[0]
+prev_pos = pos_p[0]
+prev_rot = rot_p[0]
 # add the prior pose
-graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev[0], prev[2], 0.0), PRIOR_NOISE))
-initial.insert(1, gtsam.Pose2(prev[0], prev[2], 0.0))
+graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev_pos[0], prev_pos[2], 0.0), PRIOR_NOISE))
+initial.insert(1, gtsam.Pose2(prev_pos[0], prev_pos[2], 0.0))
 
-for i, p in enumerate(pos_p[1:]):
+for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
     i += 2 # reindex since gtsam indices start at 1
-    delta = p - prev
+    delta_pos = p - prev_pos
+    delta_rot = r @ prev_rot.T
 
     # add factor for pose transition and initial pose estimate for later optimization
-    graph.add(gtsam.BetweenFactorPose2(i - 1, i, gtsam.Pose2(delta[0], delta[2], 0.0), ODOMETRY_NOISE))
-    initial.insert(i, gtsam.Pose2(p[0], p[2], 0.0))
+    graph.add(gtsam.BetweenFactorPose2(i - 1, i, gtsam.Pose2(delta_pos[0], delta_pos[2], gtsam.Rot3(delta_rot).yaw()), ODOMETRY_NOISE))
+    initial.insert(i, gtsam.Pose2(p[0], p[2], gtsam.Rot3(r).yaw()))
 
-    prev = p
+    prev_pos = p
+    prev_rot = r
 
 # optimize
 params = gtsam.LevenbergMarquardtParams()
