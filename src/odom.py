@@ -77,7 +77,11 @@ for f in util.progress_bar(sorted(glob.glob('data/kitti/image_0/*.png')), 'Progr
     draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
     cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
     cv2.imshow("trajectory", graph)
-    if cv2.waitKey(1) == ord('q'):
+    cmd = cv2.waitKey(1)
+    if cmd == ord('p'):
+        print(f'Current frame: {f}')
+        cv2.circle(traj, graph_coords(pos_t), 1, (0,0,255), 8)
+    elif cmd == ord('q'):
         break
     
     img0 = img1 # go next
