@@ -19,8 +19,14 @@ pos_p = pred[:,:,3]
 
 rot_p = pred[:,:,:3]
 
+dists_p = list(map(np.linalg.norm, pos_t))
+eulers_p = list(map(lambda x: gtsam.Rot3(x).yaw(), rot_p))
+x = [r * math.cos(theta) for r, theta in zip(dists_p, eulers_p)]
+y = [r * math.sin(theta) for r, theta in zip(dists_p, eulers_p)]
+
 plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
 plt.plot(pos_p[:,0], pos_p[:,2], label='Pred')
+plt.plot(x, y, label='Polar')
 plt.legend()
 
 graph = gtsam.NonlinearFactorGraph()
