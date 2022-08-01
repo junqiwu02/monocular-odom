@@ -28,7 +28,7 @@ initial = gtsam.Values()
 prev_pos = pos_p[0]
 prev_rot = rot_p[0]
 # add the prior pose
-graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev_pos[0], prev_pos[2], 0), PRIOR_NOISE))
+graph.add(gtsam.PriorFactorPose2(0, gtsam.Pose2(prev_pos[0], prev_pos[2], 0), PRIOR_NOISE))
 initial.insert(0, gtsam.Pose2(prev_pos[0], prev_pos[2], 0))
 
 for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
@@ -54,7 +54,7 @@ graph.add(gtsam.BetweenFactorPose2(1644, 207, gtsam.Pose2(0, 0, 0), ODOMETRY_NOI
 graph.add(gtsam.BetweenFactorPose2(3429, 2476, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
 # delta_rot = gtsam.Rot3(rot_p[3681] @ rot_p[745].T).yaw()
 graph.add(gtsam.BetweenFactorPose2(3681, 745, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
-# graph.add(gtsam.BetweenFactorPose2(4463, 6, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
+graph.add(gtsam.BetweenFactorPose2(4463, 6, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
 
 # graph.add(gtsam.BetweenFactorPose2(1412, 573, gtsam.Pose2(pos_p[1412][0] - pos_p[573][0], pos_p[1412][2] - pos_p[573][2], 0), ODOMETRY_NOISE))
 # graph.add(gtsam.BetweenFactorPose2(1644, 207, gtsam.Pose2(pos_p[1644][0] - pos_p[207][0], pos_p[1644][2] - pos_p[207][2], 0), ODOMETRY_NOISE))

@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import glob
 import util
+import gtsam
+import math
 
 MIN_KP = 1000
 MAX_KP = 2000
@@ -58,7 +60,12 @@ for f in util.progress_bar(sorted(glob.glob('data/kitti/image_0/*.png')), 'Progr
 
         if scale > 0.1 and t[2] > t[0] and t[2] > t[1]: # assume movement is dominantly foward to avoid issues with moving objects and ignore small movements for less noise when stopped
             # update position and rotation
-            pos += scale * rot @ t # translation is calc'd first because t is relative to original heading
+            # NOTE : it seems that bumps in the road lead to large y translation errors
+            # Temp heuristic solution will just to be to project the vector onto the x-z plane
+            dt = rot @ t
+            dt[1] = 0
+            dt /= np.linalg.norm(dt)
+            pos += scale * dt # translation is calc'd first because t is relative to original heading
             rot = R @ rot
 
     def graph_coords(v): # convert position vector to graph image coords
@@ -75,7 +82,8 @@ for f in util.progress_bar(sorted(glob.glob('data/kitti/image_0/*.png')), 'Progr
     graph = traj.copy()
     draw_arrow(graph, pos, rot, (255, 0, 0))
     draw_arrow(graph, pos_t, rot_t, (0, 127, 0))
-    cv2.putText(graph, f'Translation error: {abs(pos - pos_t)}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    cv2.putText(graph, f'Translation error: {(pos - pos_t).flatten()}m', (0, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    cv2.putText(graph, f'Rotation error: {gtsam.Rot3(rot @ rot_t.T).xyz() * 180 / math.pi}deg', (0, 40), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
     cv2.imshow("trajectory", graph)
     cmd = cv2.waitKey(1)
     if cmd == ord('p'):
