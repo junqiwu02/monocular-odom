@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 import gtsam
@@ -19,14 +18,8 @@ pos_p = pred[:,:,3]
 
 rot_p = pred[:,:,:3]
 
-dists_p = list(map(np.linalg.norm, pos_t))
-eulers_p = list(map(lambda x: gtsam.Rot3(x).yaw(), rot_p))
-x = [r * math.cos(theta) for r, theta in zip(dists_p, eulers_p)]
-y = [r * math.sin(theta) for r, theta in zip(dists_p, eulers_p)]
-
 plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
 plt.plot(pos_p[:,0], pos_p[:,2], label='Pred')
-plt.plot(x, y, label='Polar')
 plt.legend()
 
 graph = gtsam.NonlinearFactorGraph()
@@ -44,6 +37,7 @@ for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
     delta_rot = r @ prev_rot.T
 
     # add factor for pose transition and initial pose estimate for later optimization
+    # Pose2 translations must be relative to the CURRENT heading, not relative to the world frame
     graph.add(gtsam.BetweenFactorPose2(i - 1, i, gtsam.Pose2(delta_pos[0], delta_pos[2], 0), ODOMETRY_NOISE))
     initial.insert(i, gtsam.Pose2(p[0], p[2], 0))
 

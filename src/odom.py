@@ -3,8 +3,8 @@ import numpy as np
 import glob
 import util
 
-MIN_KP = 500
-MAX_KP = 1000
+MIN_KP = 1000
+MAX_KP = 2000
 
 FOCAL = 718.8560
 PP = (607.1928, 185.2157)
