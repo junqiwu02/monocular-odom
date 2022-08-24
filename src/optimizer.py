@@ -18,6 +18,7 @@ seq_id = sys.argv[1]
 
 truth = np.loadtxt(f'data/kitti/poses/{seq_id}.txt').reshape((-1, 3, 4))
 pred = np.loadtxt(f'results/{seq_id}_pred_final.txt').reshape((-1, 3, 4))
+loops = np.loadtxt(f'results/{seq_id}_loops.txt', dtype=int)
 
 pos_t = truth[:,:,3] # extract position vectors from pose mat
 pos_p = pred[:,:,3]
@@ -46,12 +47,9 @@ for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
     prev_pos = p
     prev_rot = r
 
-# hardcoded loop closures
-graph.add(gtsam.BetweenFactorPose2(1412, 573, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
-graph.add(gtsam.BetweenFactorPose2(1644, 207, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
-graph.add(gtsam.BetweenFactorPose2(3429, 2476, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
-graph.add(gtsam.BetweenFactorPose2(3681, 745, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
-graph.add(gtsam.BetweenFactorPose2(4463, 6, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
+# add loop closures
+for i, j in loops:
+    graph.add(gtsam.BetweenFactorPose2(i, j, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
 
 # optimize
 params = gtsam.LevenbergMarquardtParams()
@@ -64,13 +62,17 @@ def values_to_array(values):
     return np.array([[values.atPose2(i).x(), 0, values.atPose2(i).y()] for i in range(values.size())])
     
 
-# for i in range(0, pos_p.shape[0], PLOT_STEP):
-#     gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
 plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
 plt.plot(pos_p[:,0], pos_p[:,2], label='Pred', linestyle='dotted')
 pos_opt = values_to_array(result)
 plt.plot(pos_opt[:,0], pos_opt[:,2], label='Optimized', linestyle='dashdot')
+plt.scatter(pos_t[loops[:,0],0], pos_t[loops[:,0],2], label='Loops')
 plt.legend()
+
+if len(sys.argv) >= 3 and sys.argv[2] == '-c':
+    for i in range(0, pos_p.shape[0], PLOT_STEP):
+        gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
+
 
 
 plt.show()
