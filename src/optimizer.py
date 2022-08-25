@@ -17,8 +17,8 @@ seq_id = sys.argv[1]
 
 
 truth = np.loadtxt(f'data/kitti/poses/{seq_id}.txt').reshape((-1, 3, 4))
-pred = np.loadtxt(f'results/{seq_id}_pred_final.txt').reshape((-1, 3, 4))
-loops = np.loadtxt(f'results/{seq_id}_loops.txt', dtype=int)
+pred = np.loadtxt(f'results/poses/{seq_id}_pred.txt').reshape((-1, 3, 4))
+loops = np.loadtxt(f'results/loops/{seq_id}_loops.txt', dtype=int).reshape((-1, 2))
 
 pos_t = truth[:,:,3] # extract position vectors from pose mat
 pos_p = pred[:,:,3]
@@ -69,7 +69,7 @@ plt.plot(pos_opt[:,0], pos_opt[:,2], label='Optimized', linestyle='dashdot')
 plt.scatter(pos_t[loops[:,0],0], pos_t[loops[:,0],2], label='Loops')
 plt.legend()
 
-if len(sys.argv) >= 3 and sys.argv[2] == '-c':
+if len(sys.argv) >= 3 and sys.argv[2] == '-c': # plot covariances
     for i in range(0, pos_p.shape[0], PLOT_STEP):
         gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
 

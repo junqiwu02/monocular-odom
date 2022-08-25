@@ -105,5 +105,5 @@ for f, pose_t in zip(util.progress_bar(imgs, 'Progress: '), truth):
     pose_p[:,:3] = rot
     pred.append(pose_p.flatten())
 
-np.savetxt(f'results/{seq_id}_pred.txt', pred)
+np.savetxt(f'results/poses/{seq_id}_pred.txt', pred)
 cv2.destroyAllWindows()
