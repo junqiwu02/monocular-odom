@@ -1,8 +1,8 @@
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 import gtsam
 import gtsam.utils.plot as gtsam_plot
+import sys
 
 
 # Create noise models
@@ -10,18 +10,20 @@ ODOMETRY_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([0.0004, 0.0004, 0.00
 PRIOR_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([0, 0, 0]))
 PLOT_STEP = 50 # poses to skip when plotting
 
+if len(sys.argv) < 2:
+    sys.exit('Please enter a sequence id and try again!')
 
-gt = np.loadtxt('data/kitti/00.txt').reshape((-1, 3, 4))
-pred = np.loadtxt('data/kitti/00_pred_final.txt').reshape((-1, 3, 4))
+seq_id = sys.argv[1]
 
-pos_t = gt[:,:,3] # extract position vectors from pose mat
+
+truth = np.loadtxt(f'data/kitti/poses/{seq_id}.txt').reshape((-1, 3, 4))
+pred = np.loadtxt(f'results/poses/{seq_id}_pred.txt').reshape((-1, 3, 4))
+loops = np.loadtxt(f'results/loops/{seq_id}_loops.txt', dtype=int).reshape((-1, 2))
+
+pos_t = truth[:,:,3] # extract position vectors from pose mat
 pos_p = pred[:,:,3]
 
 rot_p = pred[:,:,:3]
-
-plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
-plt.plot(pos_p[:,0], pos_p[:,2], label='Pred')
-plt.legend()
 
 graph = gtsam.NonlinearFactorGraph()
 initial = gtsam.Values()
@@ -29,8 +31,8 @@ initial = gtsam.Values()
 prev_pos = pos_p[0]
 prev_rot = rot_p[0]
 # add the prior pose
-graph.add(gtsam.PriorFactorPose2(1, gtsam.Pose2(prev_pos[0], prev_pos[2], math.pi / 2), PRIOR_NOISE))
-initial.insert(0, gtsam.Pose2(prev_pos[0], prev_pos[2], math.pi / 2))
+graph.add(gtsam.PriorFactorPose2(0, gtsam.Pose2(prev_pos[0], prev_pos[2], 0), PRIOR_NOISE))
+initial.insert(0, gtsam.Pose2(prev_pos[0], prev_pos[2], 0))
 
 for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
     i += 1 # reindex
@@ -38,11 +40,16 @@ for i, (p, r) in enumerate(zip(pos_p[1:], rot_p[1:])):
     delta_rot = r @ prev_rot.T
 
     # add factor for pose transition and initial pose estimate for later optimization
-    graph.add(gtsam.BetweenFactorPose2(i - 1, i, gtsam.Pose2(delta_pos[0], delta_pos[2], math.pi / 2 - gtsam.Rot3(delta_rot).yaw()), ODOMETRY_NOISE))
-    initial.insert(i, gtsam.Pose2(p[0], p[2], math.pi / 2 - gtsam.Rot3(r).yaw()))
+    # Pose2 translations must be relative to the CURRENT heading, not relative to the world frame
+    graph.add(gtsam.BetweenFactorPose2(i - 1, i, gtsam.Pose2(delta_pos[0], delta_pos[2], 0), ODOMETRY_NOISE))
+    initial.insert(i, gtsam.Pose2(p[0], p[2], 0))
 
     prev_pos = p
     prev_rot = r
+
+# add loop closures
+for i, j in loops:
+    graph.add(gtsam.BetweenFactorPose2(i, j, gtsam.Pose2(0, 0, 0), ODOMETRY_NOISE))
 
 # optimize
 params = gtsam.LevenbergMarquardtParams()
@@ -51,7 +58,21 @@ result = optimizer.optimize()
 
 marginals = gtsam.Marginals(graph, result)
 
-for i in range(0, pos_p.shape[0], PLOT_STEP):
-    gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
+def values_to_array(values):
+    return np.array([[values.atPose2(i).x(), 0, values.atPose2(i).y()] for i in range(values.size())])
+    
+
+plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
+plt.plot(pos_p[:,0], pos_p[:,2], label='Pred', linestyle='dotted')
+pos_opt = values_to_array(result)
+plt.plot(pos_opt[:,0], pos_opt[:,2], label='Optimized', linestyle='dashdot')
+plt.scatter(pos_t[loops[:,0],0], pos_t[loops[:,0],2], label='Loops')
+plt.legend()
+
+if len(sys.argv) >= 3 and sys.argv[2] == '-c': # plot covariances
+    for i in range(0, pos_p.shape[0], PLOT_STEP):
+        gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
+
+
 
 plt.show()
