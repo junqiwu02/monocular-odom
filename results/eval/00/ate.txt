@@ -1,0 +1,19 @@
+(env) junqi@LAPTOP-5RRJET6I:~/monocular-odom$ python src/eval/evaluate_ate.py results/eval/00.txt results/eval/00_pred.txt --plot results/eval/00_plot.png --verbose
+compared_pose_pairs 4541 pairs
+absolute_translational_error.rmse 7.088046 m
+absolute_translational_error.mean 6.176526 m
+absolute_translational_error.median 5.369775 m
+absolute_translational_error.std 3.477199 m
+absolute_translational_error.min 1.131699 m
+absolute_translational_error.max 14.406396 m
+src/eval/evaluate_ate.py:196: UserWarning: Creating legend with loc="best" can be slow with large amounts of data.
+  plt.savefig(args.plot,dpi=90)
+  
+(env) junqi@LAPTOP-5RRJET6I:~/monocular-odom$ python src/eval/evaluate_ate.py results/eval/00.txt results/eval/00_opt.txt --plot results/eval/00_plot.png --verbose
+compared_pose_pairs 4541 pairs
+absolute_translational_error.rmse 3.410988 m
+absolute_translational_error.mean 2.902402 m
+absolute_translational_error.median 2.253205 m
+absolute_translational_error.std 1.791898 m
+absolute_translational_error.min 0.400799 m
+absolute_translational_error.max 11.654447 m

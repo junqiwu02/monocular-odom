@@ -1,0 +1,16 @@
+(env) junqi@LAPTOP-5RRJET6I:~/monocular-odom$ python src/eval/evaluate_ate.py results/eval/07/true.txt results/eval/07/predicted.txt --verbose
+compared_pose_pairs 1101 pairs
+absolute_translational_error.rmse 16.337434 m
+absolute_translational_error.mean 14.008463 m
+absolute_translational_error.median 13.384601 m
+absolute_translational_error.std 8.406826 m
+absolute_translational_error.min 2.163741 m
+absolute_translational_error.max 31.698372 m
+(env) junqi@LAPTOP-5RRJET6I:~/monocular-odom$ python src/eval/evaluate_ate.py results/eval/07/true.txt results/eval/07/optimized.txt --verbose
+compared_pose_pairs 1101 pairs
+absolute_translational_error.rmse 5.219811 m
+absolute_translational_error.mean 5.005066 m
+absolute_translational_error.median 5.042218 m
+absolute_translational_error.std 1.481801 m
+absolute_translational_error.min 1.774615 m
+absolute_translational_error.max 8.021507 m

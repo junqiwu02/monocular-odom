@@ -60,11 +60,12 @@ marginals = gtsam.Marginals(graph, result)
 
 def values_to_array(values):
     return np.array([[values.atPose2(i).x(), 0, values.atPose2(i).y()] for i in range(values.size())])
+
+pos_opt = values_to_array(result)
     
 
 plt.plot(pos_t[:,0], pos_t[:,2], label='Truth')
 plt.plot(pos_p[:,0], pos_p[:,2], label='Pred', linestyle='dotted')
-pos_opt = values_to_array(result)
 plt.plot(pos_opt[:,0], pos_opt[:,2], label='Optimized', linestyle='dashdot')
 plt.scatter(pos_t[loops[:,0],0], pos_t[loops[:,0],2], label='Loops')
 plt.legend()
@@ -73,6 +74,27 @@ if len(sys.argv) >= 3 and sys.argv[2] == '-c': # plot covariances
     for i in range(0, pos_p.shape[0], PLOT_STEP):
         gtsam_plot.plot_pose2(plt.gcf().number, result.atPose2(i), 10, marginals.marginalCovariance(i))
 
+# output
+times = np.loadtxt(f'data/kitti/sequences/{seq_id}/times.txt')
 
+out_true = np.zeros((times.shape[0], 8))
+out_pred = np.zeros((times.shape[0], 8))
+out_opt = np.zeros((times.shape[0], 8))
 
+out_true[:,0] = times
+out_true[:,1] = pos_t[:,0]
+out_true[:,3] = pos_t[:,2]
+np.savetxt(f'results/eval/{seq_id}/true.txt', out_true)
+
+out_pred[:,0] = times
+out_pred[:,1] = pos_p[:,0]
+out_pred[:,3] = pos_p[:,2]
+np.savetxt(f'results/eval/{seq_id}/predicted.txt', out_pred)
+
+out_opt[:,0] = times
+out_opt[:,1] = pos_opt[:,0]
+out_opt[:,3] = pos_opt[:,2]
+np.savetxt(f'results/eval/{seq_id}/optimized.txt', out_opt)
+
+plt.savefig(f'results/eval/{seq_id}/plot.png')
 plt.show()
