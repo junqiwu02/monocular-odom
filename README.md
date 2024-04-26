@@ -1,5 +1,6 @@
 # Monocular Odometry
 ![Hero image](Hero.png)
+
 A monocular visual odometry demo using OpenCV, based on the method described by Avi Singh: https://avisingh599.github.io/vision/monocular-vo/
 
 Check out the project outcome for a conceptual overview: [Project_Outcome.pdf](Project_Outcome.pdf)
